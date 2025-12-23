@@ -11,6 +11,6 @@ RUN npm ci --only=production
 # копируем исходники
 COPY . .
 
-EXPOSE 3000
+EXPOSE 8081
 
 CMD ["node", "app.js"]
