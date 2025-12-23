@@ -7,21 +7,28 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
+        stage('Install Backend') {
             steps {
-                checkout scm
+                dir('backend') { // заходим в папку backend
+                    bat 'npm install'
+                }
             }
         }
 
-        stage('Install') {
+        stage('Build Frontend') {
             steps {
-                bat 'npm install'
+                dir('frontend') { // заходим в папку frontend
+                    bat 'npm install'
+                    // bat 'npm run build' если есть сборка
+                }
             }
         }
 
-        stage('Test') {
+        stage('Test Backend') {
             steps {
-                bat 'npm test -- --coverage'
+                dir('backend') {
+                    bat 'npm test'
+                }
             }
         }
 
