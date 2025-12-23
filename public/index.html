@@ -2,11 +2,32 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>CI/CD Lab</title>
+<title>CI/CD Lab — Enhanced</title>
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<h1>Простая страничка для CI/CD лабораторной</h1>
-<p>Если вы видите эту страницу — сервер работает.</p>
-<p>А вот это дополнение к предыдущему</p>
+<div class="container">
+<h1>CI/CD Lab — To‑Do & Status</h1>
+
+
+<section class="status">
+<h2>Service status</h2>
+<p id="health">Loading...</p>
+<p>Server time: <span id="time">—</span></p>
+<p>Visits (server-side): <span id="visits">—</span></p>
+</section>
+
+
+<section class="tasks">
+<h2>Tasks</h2>
+<form id="taskForm">
+<input id="title" placeholder="Title" required />
+<input id="desc" placeholder="Description" />
+<button type="submit">Add task</button>
+</form>
+<ul id="taskList"></ul>
+</section>
+</div>
+<script src="/app.js"></script>
 </body>
 </html>

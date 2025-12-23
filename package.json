@@ -1,14 +1,16 @@
 {
 "name": "ci-cd-lab",
-"version": "1.0.0",
-"description": "Simple Node app for CI/CD lab",
+"version": "1.1.0",
+"description": "Enhanced CI/CD lab app: simple todo + API + tests",
 "main": "app.js",
 "scripts": {
 "start": "node app.js",
-"test": "jest --coverage"
+"test": "jest --coverage",
+"lint": "echo 'no lint'"
 },
 "dependencies": {
-"express": "^4.18.2"
+"express": "^4.18.2",
+"body-parser": "^1.20.2"
 },
 "devDependencies": {
 "jest": "^29.0.0",

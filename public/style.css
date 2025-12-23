@@ -1,0 +1,7 @@
+body{font-family:Arial, Helvetica, sans-serif;background:#f7f7f9;margin:0;padding:20px}
+.container{max-width:800px;margin:0 auto;background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+h1{margin-top:0}
+.status, .tasks{margin-bottom:20px}
+#taskList{list-style:none;padding:0}
+#taskList li{padding:8px 10px;border:1px solid #eee;margin-bottom:8px;border-radius:6px}
+form input{padding:8px;margin-right:8px}
