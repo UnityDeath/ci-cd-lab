@@ -44,27 +44,6 @@ setlocal ENABLEDELAYEDEXPANSION
 echo ===== DEPLOY START: %DATE% %TIME% =====
 echo WORKSPACE=%WORKSPACE%
 
-REM helper: check errorlevel and print message then exit
-:check
-if NOT "%~1"=="" (
-  set ERR=%ERRORLEVEL%
-  if NOT "%ERR%"=="0" (
-    echo ERROR: Step failed: %~1  (ERRORLEVEL=%ERR%)
-    echo ===== DEPLOY ABORT =====
-    exit /b %ERR%
-  )
-)
-goto :eof
-
-REM --- Kill any process currently listening on port 3000 ---
-echo --- Step: kill processes on port 8081 (if any)
-for /F "tokens=5" %%p in ('netstat -ano ^| findstr /R /C:":8081 " ^| findstr LISTENING') do (
-  echo Found PID %%p on port 8081, attempting to kill...
-  taskkill /PID %%p /F >NUL 2>&1
-  echo taskkill returned ERRORLEVEL=%ERRORLEVEL%
-)
-call :check "kill-port-8081"
-
 REM --- Prepare deploy directories ---
 echo --- Step: prepare deploy folders
 if not exist "C:\\deploy\\ci-cd-lab" mkdir "C:\\deploy\\ci-cd-lab"
