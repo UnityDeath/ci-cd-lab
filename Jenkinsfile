@@ -6,107 +6,74 @@ pipeline {
     }
     
     stages {
-        stage('Install Dependencies') {
+        stage('Prepare') {
             steps {
                 script {
-                    // Устанавливаем зависимости для backend
                     dir('backend') {
                         bat 'npm install'
                     }
-                    
-                    // Устанавливаем http-server глобально для frontend
                     bat 'npm install -g http-server'
                 }
             }
         }
         
-        stage('Start Servers') {
+        stage('Run Servers') {
             steps {
                 script {
-                    // Запускаем backend как фоновый процесс
+                    // Запускаем оба сервера в одном бат-файле
                     bat '''
                     @echo off
+                    
+                    echo ===== STARTING SERVERS =====
+                    
+                    REM Запускаем backend
+                    echo 1. Starting backend on port 8081...
                     cd backend
-                    echo Starting backend on port 8081...
-                    start "Backend" /B npm start
-                    '''
+                    start "BackendServer" /B cmd /c "npm start"
+                    cd..
                     
-                    // Даем backend время на запуск
-                    sleep(time: 10, unit: 'SECONDS')
+                    REM Ждем пока backend запустится
+                    timeout /t 15 /nobreak > nul
                     
-                    // Запускаем frontend как фоновый процесс
-                    bat '''
-                    @echo off
+                    REM Запускаем frontend  
+                    echo 2. Starting frontend on port 8082...
                     cd frontend
-                    echo Starting frontend on port 8082...
-                    start "Frontend" /B npx http-server -p 8082
-                    '''
+                    start "FrontendServer" /B cmd /c "http-server -p 8082"
+                    cd..
                     
-                    // Даем frontend время на запуск
-                    sleep(time: 10, unit: 'SECONDS')
-                }
-            }
-        }
-        
-        stage('Check Servers') {
-            steps {
-                script {
-                    // Проверяем, что процессы запущены
-                    echo 'Checking running processes...'
-                    
-                    bat '''
-                    @echo off
-                    echo === Node processes ===
-                    tasklist | findstr node
-                    echo.
-                    echo === Java processes ===
-                    tasklist | findstr java
-                    echo.
-                    echo === All processes with "http" ===
-                    tasklist | findstr http
-                    '''
-                }
-            }
-        }
-        
-        stage('Test Connection') {
-            steps {
-                script {
-                    echo 'Testing if servers are responding...'
-                    
-                    // Пытаемся проверить подключение
-                    bat '''
-                    @echo off
-                    echo Testing backend (timeout 10 seconds)...
+                    REM Ждем немного
                     timeout /t 10 /nobreak > nul
-                    curl -s -o nul -w "Backend HTTP code: %%{http_code}\\n" http://localhost:8081/api/health || echo Backend check failed
                     
-                    echo Testing frontend (timeout 10 seconds)...
-                    timeout /t 10 /nobreak > nul
-                    curl -s -o nul -w "Frontend HTTP code: %%{http_code}\\n" http://localhost:8082 || echo Frontend check failed
+                    echo ===== SERVERS STARTED =====
+                    echo Backend: http://localhost:8081
+                    echo Frontend: http://localhost:8082
+                    echo ============================
+                    echo.
+                    echo Now waiting for 10 minutes...
                     '''
-                }
-            }
-        }
-        
-        stage('Manual Test Period') {
-            steps {
-                script {
-                    echo '==========================================='
-                    echo 'MANUAL TESTING PERIOD: 10 MINUTES'
-                    echo 'Frontend URL: http://localhost:8082'
-                    echo 'Backend URL: http://localhost:8081'
-                    echo ''
-                    echo 'Servers are running. You can now:'
-                    echo '1. Open browser'
-                    echo '2. Go to http://localhost:8082'
-                    echo '3. Test the application'
-                    echo '==========================================='
                     
-                    // Увеличиваем время ожидания до 10 минут
+                    // Ждем 10 минут для ручного тестирования
                     sleep(time: 600, unit: 'SECONDS')
                     
-                    echo 'Manual test period ended.'
+                    echo 'Test period finished. Servers are still running.'
+                }
+            }
+        }
+        
+        stage('Show Status') {
+            steps {
+                script {
+                    // Эта стадия всегда выполняется, даже если есть ошибки
+                    echo '=== CURRENT STATUS ==='
+                    bat '''
+                    @echo off
+                    echo Node.js processes:
+                    tasklist /FI "IMAGENAME eq node.exe" 2>nul
+                    echo.
+                    echo Server check (may fail if servers not ready):
+                    curl http://localhost:8081/api/health -s -o nul && echo Backend is responding || echo Backend not responding
+                    curl http://localhost:8082 -s -o nul && echo Frontend is responding || echo Frontend not responding
+                    '''
                 }
             }
         }
@@ -114,21 +81,10 @@ pipeline {
     
     post {
         always {
-            echo '==========================================='
-            echo 'PIPELINE COMPLETED'
-            echo ''
-            echo 'IMPORTANT: Servers might still be running!'
-            echo ''
-            echo 'To stop all servers manually:'
-            echo '1. Open Command Prompt as Administrator'
-            echo '2. Run: taskkill /F /IM node.exe'
-            echo '3. Run: taskkill /F /IM http-server.exe'
-            echo '==========================================='
-        }
-        
-        failure {
-            echo 'Pipeline failed but servers might still be running!'
-            echo 'Check logs above for errors.'
+            echo '=== INSTRUCTIONS ==='
+            echo 'To stop servers: taskkill /F /IM node.exe'
+            echo 'To test: http://localhost:8082'
+            echo '===================='
         }
     }
 }
