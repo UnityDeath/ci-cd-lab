@@ -58,9 +58,9 @@ pipeline {
             echo No package.json found
           )
           
-          REM Stop any running process on port 3000
-          echo Stopping any process on port 3000...
-          for /F "tokens=5" %%p in ('netstat -ano ^| findstr :3000') do (
+          REM Stop any running process on port 8081 (где работает бэкенд)
+          echo Stopping any process on port 8081...
+          for /F "tokens=5" %%p in ('netstat -ano ^| findstr :8081') do (
             echo Killing process with PID %%p
             taskkill /PID %%p /F >NUL 2>&1
           )
@@ -68,7 +68,7 @@ pipeline {
           timeout /t 2 /nobreak >nul
           
           REM Start backend server
-          echo Starting backend server...
+          echo Starting backend server on port 8081...
           cd /d C:\\deploy\\ci-cd-lab\\backend
           
           if exist package.json (
@@ -87,18 +87,39 @@ pipeline {
           echo Waiting for server to start...
           timeout /t 5 /nobreak >nul
           
-          REM Альтернативная проверка без curl
-          echo Checking server...
-          powershell -Command "(New-Object Net.WebClient).DownloadString('http://localhost:3000')" >nul 2>&1
+          REM Check if backend is running on port 8081
+          echo Checking backend server on port 8081...
+          powershell -Command "(New-Object Net.WebClient).DownloadString('http://localhost:8081')" >nul 2>&1
           if %errorlevel% equ 0 (
-              echo SUCCESS: Server responded
+              echo SUCCESS: Backend server is running on http://localhost:8081
           ) else (
-              echo WARNING: Server check failed
+              echo WARNING: Backend server check failed on port 8081
+              echo Check C:\\deploy\\ci-cd-lab\\backend\\app.log for details
+          )
+          
+          REM Start frontend server on different port (например 8082)
+          echo Starting frontend server on port 8082...
+          cd /d C:\\deploy\\ci-cd-lab\\frontend
+          
+          REM Install http-server globally or use npx
+          start "" /B cmd /c "npx http-server -p 8082 > C:\\deploy\\ci-cd-lab\\frontend\\app.log 2>&1"
+          
+          timeout /t 3 /nobreak >nul
+          
+          REM Check if frontend is running
+          echo Checking frontend server on port 8082...
+          powershell -Command "(New-Object Net.WebClient).DownloadString('http://localhost:8082')" >nul 2>&1
+          if %errorlevel% equ 0 (
+              echo SUCCESS: Frontend is running on http://localhost:8082
+          ) else (
+              echo WARNING: Frontend server check failed on port 8082
           )
           
           echo Deployment completed!
+          echo Backend: http://localhost:8081
+          echo Frontend: http://localhost:8082
           echo Backend log: C:\\deploy\\ci-cd-lab\\backend\\app.log
-          echo Frontend files: C:\\deploy\\ci-cd-lab\\frontend
+          echo Frontend log: C:\\deploy\\ci-cd-lab\\frontend\\app.log
         """
       }
     }
@@ -107,10 +128,17 @@ pipeline {
   post {
     success { 
       echo 'Pipeline finished successfully.' 
-      bat 'echo Backend should be running at http://localhost:3000'
+      echo 'Backend доступен по адресу: http://localhost:8081'
+      echo 'Frontend доступен по адресу: http://localhost:8082'
     }
     failure { 
       echo 'Pipeline failed - see console output.' 
+      bat '''
+        echo === Checking backend log ===
+        type C:\\deploy\\ci-cd-lab\\backend\\app.log 2>nul || echo Backend log not found
+        echo === Checking frontend log ===
+        type C:\\deploy\\ci-cd-lab\\frontend\\app.log 2>nul || echo Frontend log not found
+      '''
     }
   }
 }

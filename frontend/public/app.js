@@ -17,11 +17,6 @@ document.getElementById('health').textContent = 'error';
 }
 }
 
-
-function kajsdn() {
-    return 1;
-}
-
 async function loadTasks(){
 const tasks = await api('/api/tasks');
 const ul = document.getElementById('taskList');
