@@ -19,7 +19,7 @@ document.getElementById('health').textContent = 'error';
 
 
 function kajsdn() {
-    return 0;
+    return 1;
 }
 
 async function loadTasks(){
