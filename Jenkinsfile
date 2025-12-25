@@ -10,7 +10,6 @@ pipeline {
       steps {
         dir('backend') {
           bat 'echo Installing backend dependencies...'
-          // используем npm ci если есть package-lock, иначе npm install
           bat 'if exist package-lock.json (npm ci) else (npm install)'
         }
       }
@@ -20,9 +19,6 @@ pipeline {
       steps {
         dir('frontend') {
           bat 'echo Frontend is static — no npm install required (skipped)'
-          // Если у вас SPA с билдом, замените/раскомментируйте соответствующие команды
-          // bat 'npm install'
-          // bat 'npm run build'
         }
       }
     }
@@ -40,7 +36,7 @@ pipeline {
     stage('Deploy') {
       steps {
         echo 'Deploying to local server (copy backend & start)...'
-        bat """
+        bat '''
 @echo off
 setlocal enableextensions enabledelayedexpansion
 
@@ -63,39 +59,38 @@ xcopy /E /I /Y "%WORKSPACE%\\backend\\*" "C:\\deploy\\ci-cd-lab\\backend\\"
 xcopy /E /I /Y "%WORKSPACE%\\frontend\\*" "C:\\deploy\\ci-cd-lab\\frontend\\"
 
 REM 1) если репозиторий уже есть — делаем git pull, иначе клонируем
-if exist "C:\deploy\ci-cd-lab\.git" (
+if exist "C:\\deploy\\ci-cd-lab\\.git" (
   echo Repo exists — pulling
-  cd /d C:\deploy\ci-cd-lab
+  cd /d C:\\deploy\\ci-cd-lab
   git fetch --all
-  git reset --hard origin\main
+  git reset --hard origin\\main
 ) else (
   echo Cloning repo to deploy dir
-  rmdir /S /Q "C:\deploy\ci-cd-lab" 2>nul
-  git clone https://github.com/UnityDeath/ci-cd-lab.git "C:\deploy\ci-cd-lab"
+  rmdir /S /Q "C:\\deploy\\ci-cd-lab" 2>nul
+  git clone https://github.com/UnityDeath/ci-cd-lab.git "C:\\deploy\\ci-cd-lab"
 )
 
 REM 2) Устанавливаем зависимости в backend, если package.json изменился (см ниже)
-cd /d C:\deploy\ci-cd-lab\backend
+cd /d C:\\deploy\\ci-cd-lab\\backend
 if exist package.json (
-  if not exist C:\deploy\ci-cd-lab\.last_package_hash.txt (
-    certutil -hashfile package.json SHA256 | findstr /v "hash" > C:\deploy\ci-cd-lab\.last_package_hash.txt
+  if not exist C:\\deploy\\ci-cd-lab\\.last_package_hash.txt (
+    certutil -hashfile package.json SHA256 | findstr /v "hash" > C:\\deploy\\ci-cd-lab\\.last_package_hash.txt
     npm ci --production
   ) else (
-    certutil -hashfile package.json SHA256 | findstr /v "hash" > C:\deploy\ci-cd-lab\.cur_package_hash.txt
-    fc C:\deploy\ci-cd-lab\.last_package_hash.txt C:\deploy\ci-cd-lab\.cur_package_hash.txt >nul
+    certutil -hashfile package.json SHA256 | findstr /v "hash" > C:\\deploy\\ci-cd-lab\\.cur_package_hash.txt
+    fc C:\\deploy\\ci-cd-lab\\.last_package_hash.txt C:\\deploy\\ci-cd-lab\\.cur_package_hash.txt >nul
     if errorlevel 1 (
       echo package.json changed — reinstalling deps
       npm ci --production
-      move /Y C:\deploy\ci-cd-lab\.cur_package_hash.txt C:\deploy\ci-cd-lab\.last_package_hash.txt >nul
+      move /Y C:\\deploy\\ci-cd-lab\\.cur_package_hash.txt C:\\deploy\\ci-cd-lab\\.last_package_hash.txt >nul
     ) else (
       echo package.json not changed — skipping npm install
-      del C:\deploy\ci-cd-lab\.cur_package_hash.txt >nul 2>&1
+      del C:\\deploy\\ci-cd-lab\\.cur_package_hash.txt >nul 2>&1
     )
   )
 )
 
 REM --- Start backend in detached console and redirect logs to file ---
-REM Use npm start (expects package.json script) and write logs to backend\\app.log
 if exist package.json (
   echo Starting backend (detached)...
   start "" cmd /c "cd /d C:\\deploy\\ci-cd-lab\\backend && npm start > C:\\deploy\\ci-cd-lab\\backend\\app.log 2>&1"
@@ -105,7 +100,7 @@ if exist package.json (
 
 endlocal
 exit /b 0
-"""
+'''
       }
     }
   }
