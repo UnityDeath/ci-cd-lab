@@ -18,9 +18,6 @@ pipeline {
       steps {
         dir('frontend') {
           bat 'echo Frontend: static - skipped'
-          // esli nuzhen build, raskommentiruy:
-          // bat 'npm.cmd install'
-          // bat 'npm.cmd run build'
         }
       }
     }
@@ -35,75 +32,74 @@ pipeline {
 
     stage('Deploy') {
       steps {
-        script {
-          def workspacePath = pwd()
+        bat """
+          @echo off
+          echo Starting deployment...
           
-          bat """
-            @echo off
-            set WORKSPACE=${workspacePath}
-            
-            echo Working directory: %WORKSPACE%
-            
-            if not exist "C:\\deploy\\ci-cd-lab" mkdir "C:\\deploy\\ci-cd-lab"
-            if not exist "C:\\deploy\\ci-cd-lab\\backend" mkdir "C:\\deploy\\ci-cd-lab\\backend"
-            if not exist "C:\\deploy\\ci-cd-lab\\frontend" mkdir "C:\\deploy\\ci-cd-lab\\frontend"
-            
-            echo Copying backend...
-            xcopy /E /I /Y "%WORKSPACE%\\backend\\*" "C:\\deploy\\ci-cd-lab\\backend\\"
-            
-            echo Copying frontend...
-            xcopy /E /I /Y "%WORKSPACE%\\frontend\\*" "C:\\deploy\\ci-cd-lab\\frontend\\"
-            
-            cd /d C:\\deploy\\ci-cd-lab\\backend
-            if exist package.json (
-              echo Installing backend dependencies...
-              if exist package-lock.json (
-                npm.cmd ci --production
-              ) else (
-                npm.cmd install --production
-              )
-              echo Dependencies installed
-            ) else (
-              echo No package.json - skipping install
-            )
-            
-            echo Stopping old process on port 3000...
-            for /F "tokens=5" %%p in ('netstat -ano ^| findstr :3000') do (
-              echo Found process with PID %%p, stopping...
-              taskkill /PID %%p /F >NUL 2>&1
-            )
-            
-            timeout /t 2 /nobreak >nul
-            
-            echo Starting backend...
-            cd /d C:\\deploy\\ci-cd-lab\\backend
-            
-            if exist package.json (
-              echo Running npm start...
-              start "" /B cmd /c "npm.cmd start > C:\\deploy\\ci-cd-lab\\backend\\app.log 2>&1"
-            ) else (
-              echo Looking for app.js or server.js...
-              if exist app.js (
-                start "" /B cmd /c "node app.js > C:\\deploy\\ci-cd-lab\\backend\\app.log 2>&1"
-              ) else if exist server.js (
-                start "" /B cmd /c "node server.js > C:\\deploy\\ci-cd-lab\\backend\\app.log 2>&1"
-              ) else (
-                echo No file to start found!
-                exit /b 1
-              )
-            )
-            
-            echo Waiting for server start...
-            timeout /t 5 /nobreak >nul
-            
-            echo Checking server availability...
-            powershell -Command "try { $response = Invoke-WebRequest -Uri 'http://localhost:3000' -TimeoutSec 5; if ($response.StatusCode -eq 200) { Write-Host 'OK - Server is running' } else { Write-Error 'Server responded with non-200'; exit 1 } } catch { Write-Error 'Server is not reachable'; exit 1 }"
-            
-            echo Deploy completed successfully!
-            echo Files are in: C:\\deploy\\ci-cd-lab
-            echo Application logs: C:\\deploy\\ci-cd-lab\\backend\\app.log
-          """
-        }
+          REM Create deployment directory
+          if not exist "C:\\deploy\\ci-cd-lab" mkdir "C:\\deploy\\ci-cd-lab"
+          if not exist "C:\\deploy\\ci-cd-lab\\backend" mkdir "C:\\deploy\\ci-cd-lab\\backend"
+          if not exist "C:\\deploy\\ci-cd-lab\\frontend" mkdir "C:\\deploy\\ci-cd-lab\\frontend"
+          
+          REM Copy backend files
+          echo Copying backend files...
+          xcopy /E /I /Y "backend\\*" "C:\\deploy\\ci-cd-lab\\backend\\"
+          
+          REM Copy frontend files
+          echo Copying frontend files...
+          xcopy /E /I /Y "frontend\\*" "C:\\deploy\\ci-cd-lab\\frontend\\"
+          
+          REM Install backend dependencies
+          cd /d C:\\deploy\\ci-cd-lab\\backend
+          if exist package.json (
+            echo Installing backend dependencies...
+            npm.cmd install --production
+          ) else (
+            echo No package.json found
+          )
+          
+          REM Stop any running process on port 3000
+          echo Stopping any process on port 3000...
+          for /F "tokens=5" %%p in ('netstat -ano ^| findstr :3000') do (
+            echo Killing process with PID %%p
+            taskkill /PID %%p /F >NUL 2>&1
+          )
+          
+          timeout /t 2 /nobreak >nul
+          
+          REM Start backend server
+          echo Starting backend server...
+          cd /d C:\\deploy\\ci-cd-lab\\backend
+          
+          if exist package.json (
+            REM Start with npm
+            start "" /B cmd /c "npm.cmd start > C:\\deploy\\ci-cd-lab\\backend\\app.log 2>&1"
+          ) else if exist app.js (
+            REM Start with node directly
+            start "" /B cmd /c "node app.js > C:\\deploy\\ci-cd-lab\\backend\\app.log 2>&1"
+          ) else if exist server.js (
+            start "" /B cmd /c "node server.js > C:\\deploy\\ci-cd-lab\\backend\\app.log 2>&1"
+          ) else (
+            echo ERROR: No start file found!
+            exit /b 1
+          )
+          
+          echo Waiting for server to start...
+          timeout /t 5 /nobreak >nul
+          
+          REM Альтернативная проверка без curl
+          echo Checking server...
+          powershell -Command "(New-Object Net.WebClient).DownloadString('http://localhost:3000')" >nul 2>&1
+          if %errorlevel% equ 0 (
+              echo SUCCESS: Server responded
+          ) else (
+              echo WARNING: Server check failed
+          )
+          
+          echo Deployment completed!
+          echo Backend log: C:\\deploy\\ci-cd-lab\\backend\\app.log
+          echo Frontend files: C:\\deploy\\ci-cd-lab\\frontend
+        """
       }
     }
   }
@@ -111,11 +107,10 @@ pipeline {
   post {
     success { 
       echo 'Pipeline finished successfully.' 
-      echo 'Backend is available at: http://localhost:3000'
+      bat 'echo Backend should be running at http://localhost:3000'
     }
     failure { 
       echo 'Pipeline failed - see console output.' 
-      echo 'Check logs at: C:\\deploy\\ci-cd-lab\\backend\\app.log'
     }
   }
 }
