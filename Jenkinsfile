@@ -60,23 +60,23 @@ pipeline {
             }
         }
         
-        stage('Show Status') {
-            steps {
-                script {
-                    // Эта стадия всегда выполняется, даже если есть ошибки
-                    echo '=== CURRENT STATUS ==='
-                    bat '''
-                    @echo off
-                    echo Node.js processes:
-                    tasklist /FI "IMAGENAME eq node.exe" 2>nul
-                    echo.
-                    echo Server check (may fail if servers not ready):
-                    curl http://localhost:8081/api/health -s -o nul && echo Backend is responding || echo Backend not responding
-                    curl http://localhost:8082 -s -o nul && echo Frontend is responding || echo Frontend not responding
-                    '''
-                }
-            }
-        }
+        // stage('Show Status') {
+        //     steps {
+        //         script {
+        //             // Эта стадия всегда выполняется, даже если есть ошибки
+        //             echo '=== CURRENT STATUS ==='
+        //             bat '''
+        //             @echo off
+        //             echo Node.js processes:
+        //             tasklist /FI "IMAGENAME eq node.exe" 2>nul
+        //             echo.
+        //             echo Server check (may fail if servers not ready):
+        //             curl http://localhost:8081/api/health -s -o nul && echo Backend is responding || echo Backend not responding
+        //             curl http://localhost:8082 -s -o nul && echo Frontend is responding || echo Frontend not responding
+        //             '''
+        //         }
+        //     }
+        // }
     }
     
     post {
