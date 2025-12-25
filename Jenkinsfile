@@ -57,13 +57,13 @@ if NOT "%~1"=="" (
 goto :eof
 
 REM --- Kill any process currently listening on port 3000 ---
-echo --- Step: kill processes on port 3000 (if any)
-for /F "tokens=5" %%p in ('netstat -ano ^| findstr /R /C:":3000 " ^| findstr LISTENING') do (
-  echo Found PID %%p on port 3000, attempting to kill...
+echo --- Step: kill processes on port 8081 (if any)
+for /F "tokens=5" %%p in ('netstat -ano ^| findstr /R /C:":8081 " ^| findstr LISTENING') do (
+  echo Found PID %%p on port 8081, attempting to kill...
   taskkill /PID %%p /F >NUL 2>&1
   echo taskkill returned ERRORLEVEL=%ERRORLEVEL%
 )
-call :check "kill-port-3000"
+call :check "kill-port-8081"
 
 REM --- Prepare deploy directories ---
 echo --- Step: prepare deploy folders
@@ -147,12 +147,12 @@ if exist package.json (
 )
 
 REM --- Quick check: did port appear? ---
-echo --- Step: check if port 3000 opened
-for /F "tokens=5" %%q in ('netstat -ano ^| findstr /R /C:":3000 " ^| findstr LISTENING') do set PORTPID=%%q
+echo --- Step: check if port 8081 opened
+for /F "tokens=5" %%q in ('netstat -ano ^| findstr /R /C:":8081 " ^| findstr LISTENING') do set PORTPID=%%q
 if defined PORTPID (
-  echo Port 3000 is listening (PID=%PORTPID%)
+  echo Port 8081 is listening (PID=%PORTPID%)
 ) else (
-  echo WARNING: port 3000 is not listening yet. Check app.log
+  echo WARNING: port 8081 is not listening yet. Check app.log
   echo ===== Dump tail of app.log (if present) =====
   if exist C:\\deploy\\ci-cd-lab\\backend\\app.log (
     powershell -Command "Get-Content -Path 'C:\\deploy\\ci-cd-lab\\backend\\app.log' -Tail 200"
