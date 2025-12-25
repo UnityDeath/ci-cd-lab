@@ -17,74 +17,97 @@ pipeline {
             }
         }
         
-        stage('Run Servers') {
+        stage('Start Servers') {
             steps {
                 script {
-                    // Запускаем оба сервера в одном бат-файле
-                    bat '''
-                    @echo off
+                    // Создаем бат-файл для запуска серверов
+                    writeFile file: 'start-servers.bat', text: '''
+@echo off
+echo ===== STARTING SERVERS =====
+echo Backend starting on port 8081...
+cd backend
+npm start
+'''
                     
-                    echo ===== STARTING SERVERS =====
+                    writeFile file: 'start-frontend.bat', text: '''
+@echo off
+echo Frontend starting on port 8082...
+cd frontend
+http-server -p 8082
+'''
                     
-                    REM Запускаем backend
-                    echo 1. Starting backend on port 8081...
-                    cd backend
-                    start "BackendServer" /B cmd /c "npm start"
-                    cd..
+                    // Запускаем серверы через PowerShell как отдельные процессы
+                    powershell '''
+                    # Запускаем backend
+                    $backendJob = Start-Process -FilePath "cmd.exe" -ArgumentList "/c start-servers.bat" -WindowStyle Hidden -PassThru
+                    Write-Host "Backend started with PID: $($backendJob.Id)"
                     
-                    REM Ждем пока backend запустится
-                    timeout /t 15 /nobreak > nul
+                    # Ждем 10 секунд
+                    Start-Sleep -Seconds 10
                     
-                    REM Запускаем frontend  
-                    echo 2. Starting frontend on port 8082...
-                    cd frontend
-                    start "FrontendServer" /B cmd /c "http-server -p 8082"
-                    cd..
+                    # Запускаем frontend
+                    $frontendJob = Start-Process -FilePath "cmd.exe" -ArgumentList "/c start-frontend.bat" -WindowStyle Hidden -PassThru
+                    Write-Host "Frontend started with PID: $($frontendJob.Id)"
                     
-                    REM Ждем немного
-                    timeout /t 10 /nobreak > nul
-                    
-                    echo ===== SERVERS STARTED =====
-                    echo Backend: http://localhost:8081
-                    echo Frontend: http://localhost:8082
-                    echo ============================
-                    echo.
-                    echo Now waiting for 10 minutes...
+                    # Сохраняем PIDs в файл
+                    "$($backendJob.Id)" | Out-File -FilePath "backend-pid.txt"
+                    "$($frontendJob.Id)" | Out-File -FilePath "frontend-pid.txt"
                     '''
                     
-                    // Ждем 10 минут для ручного тестирования
-                    sleep(time: 600, unit: 'SECONDS')
+                    // Ждем чтобы убедиться что серверы запустились
+                    sleep(time: 20, unit: 'SECONDS')
                     
-                    echo 'Test period finished. Servers are still running.'
+                    // Проверяем процессы
+                    bat '''
+                    @echo off
+                    echo === Running Node processes ===
+                    tasklist | findstr node
+                    echo.
+                    echo === Running server processes ===
+                    tasklist | findstr http-server
+                    echo.
+                    echo === Servers should be available at ===
+                    echo Backend:  http://localhost:8081
+                    echo Frontend: http://localhost:8082
+                    '''
                 }
             }
         }
         
-        // stage('Show Status') {
-        //     steps {
-        //         script {
-        //             // Эта стадия всегда выполняется, даже если есть ошибки
-        //             echo '=== CURRENT STATUS ==='
-        //             bat '''
-        //             @echo off
-        //             echo Node.js processes:
-        //             tasklist /FI "IMAGENAME eq node.exe" 2>nul
-        //             echo.
-        //             echo Server check (may fail if servers not ready):
-        //             curl http://localhost:8081/api/health -s -o nul && echo Backend is responding || echo Backend not responding
-        //             curl http://localhost:8082 -s -o nul && echo Frontend is responding || echo Frontend not responding
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('Wait for Testing') {
+            steps {
+                script {
+                    echo '===== MANUAL TESTING PERIOD ====='
+                    echo 'Servers are running. You can now:'
+                    echo '1. Open browser'
+                    echo '2. Go to http://localhost:8082'
+                    echo '3. Test the application'
+                    echo ''
+                    echo 'Jenkins will wait for 30 minutes...'
+                    echo '==================================='
+                    
+                    // Ждем 30 минут для тестирования
+                    sleep(time: 1800, unit: 'SECONDS')
+                    
+                    echo 'Test period finished.'
+                }
+            }
+        }
     }
     
     post {
         always {
-            echo '=== INSTRUCTIONS ==='
-            echo 'To stop servers: taskkill /F /IM node.exe'
-            echo 'To test: http://localhost:8082'
-            echo '===================='
+            echo '===== IMPORTANT ====='
+            echo 'Servers may still be running!'
+            echo ''
+            echo 'To check if servers are running:'
+            echo 'tasklist | findstr node'
+            echo 'tasklist | findstr http-server'
+            echo ''
+            echo 'To stop servers:'
+            echo 'taskkill /F /IM node.exe'
+            echo 'taskkill /F /IM http-server.exe'
+            echo '====================='
         }
     }
 }
