@@ -61,9 +61,8 @@ xcopy /E /I /Y "%WORKSPACE%\\frontend\\*" "C:\\deploy\\ci-cd-lab\\frontend\\"
 REM 1) если репозиторий уже есть — делаем git pull, иначе клонируем
 if exist "C:\\deploy\\ci-cd-lab\\.git" (
   echo Repo exists — pulling
-  cd /d C:\\deploy\\ci-cd-lab
-  git fetch --all
-  git reset --hard origin\\main
+  git -C "C:\\deploy\\ci-cd-lab" fetch --all
+  git -C "C:\\deploy\\ci-cd-lab" reset --hard refs/remotes/origin/main
 ) else (
   echo Cloning repo to deploy dir
   rmdir /S /Q "C:\\deploy\\ci-cd-lab" 2>nul
