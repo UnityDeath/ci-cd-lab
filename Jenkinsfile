@@ -93,15 +93,35 @@ pipeline {
         """
       }
     }
+    
+    stage('Wait for testing') {
+      steps {
+        echo 'Waiting 120 seconds for manual testing...'
+        script {
+          // Ожидание 120 секунд (2 минуты)
+          sleep(time: 120, unit: 'SECONDS')
+        }
+        echo 'Testing period ended.'
+      }
+    }
   }
 
   post {
     success { 
       echo 'Pipeline finished successfully.' 
-      echo 'Backend: http://localhost:8081'
+      echo 'Backend was available at: http://localhost:8081'
+      echo 'Note: Server processes may have been terminated after pipeline completion.'
     }
     failure { 
       echo 'Pipeline failed.' 
+    }
+    always {
+      echo 'Cleaning up...'
+      bat '''
+        echo Stopping backend server...
+        taskkill /F /IM node.exe 2>nul || echo No node processes running
+        echo Cleanup completed.
+      '''
     }
   }
 }
