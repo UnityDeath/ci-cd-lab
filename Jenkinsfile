@@ -32,76 +32,74 @@ pipeline {
 
     stage('Deploy') {
       steps {
-        bat """
-          @echo off
-          echo Starting deployment...
-          
-          if not exist "C:\\deploy\\ci-cd-lab" mkdir "C:\\deploy\\ci-cd-lab"
-          if not exist "C:\\deploy\\ci-cd-lab\\backend" mkdir "C:\\deploy\\ci-cd-lab\\backend"
-          if not exist "C:\\deploy\\ci-cd-lab\\frontend" mkdir "C:\\deploy\\ci-cd-lab\\frontend"
-          
-          echo Copying backend files...
-          xcopy /E /I /Y "backend\\*" "C:\\deploy\\ci-cd-lab\\backend\\"
-          
-          echo Copying frontend files...
-          xcopy /E /I /Y "frontend\\*" "C:\\deploy\\ci-cd-lab\\frontend\\"
-          
-          cd /d C:\\deploy\\ci-cd-lab\\backend
-          if exist package.json (
-            echo Installing backend dependencies...
-            npm.cmd install --production
-          ) else (
-            echo No package.json found
-          )
-          
-          echo Stopping any process on port 8081...
-          for /F "tokens=5" %%p in ('netstat -ano ^| findstr :8081') do (
-            echo Killing process with PID %%p
-            taskkill /PID %%p /F >NUL 2>&1
-          )
-          
-          timeout /t 2 /nobreak >nul
-          
-          echo Starting backend server on port 8081...
-          cd /d C:\\deploy\\ci-cd-lab\\backend
-          
-          if exist package.json (
-            start "BackendServer" cmd /c "npm.cmd start"
-          ) else if exist app.js (
-            start "BackendServer" cmd /c "node app.js"
-          ) else if exist server.js (
-            start "BackendServer" cmd /c "node server.js"
-          ) else (
-            echo ERROR: No start file found!
-            exit /b 1
-          )
-          
-          echo Waiting for backend to start (10 seconds)...
-          timeout /t 10 /nobreak >nul
-          
-          echo Checking backend server on port 8081...
-          powershell -Command "(New-Object Net.WebClient).DownloadString('http://localhost:8081')" >nul 2>&1
-          if %errorlevel% equ 0 (
-              echo SUCCESS: Backend server is running on http://localhost:8081
-          ) else (
-              echo WARNING: Backend server check failed on port 8081
-          )
-          
-          echo Deployment completed!
-          echo Backend: http://localhost:8081
-          echo Files: C:\\deploy\\ci-cd-lab
-        """
+        script {
+          // Просто копируем файлы и даем инструкции для запуска
+          bat '''
+            @echo off
+            echo ===== DEPLOYMENT =====
+            echo 1. Creating deployment directory...
+            
+            if not exist "C:\\deploy\\ci-cd-lab" mkdir "C:\\deploy\\ci-cd-lab"
+            if not exist "C:\\deploy\\ci-cd-lab\\backend" mkdir "C:\\deploy\\ci-cd-lab\\backend"
+            if not exist "C:\\deploy\\ci-cd-lab\\frontend" mkdir "C:\\deploy\\ci-cd-lab\\frontend"
+            
+            echo 2. Copying backend files...
+            xcopy /E /I /Y "backend\\*" "C:\\deploy\\ci-cd-lab\\backend\\"
+            
+            echo 3. Copying frontend files...
+            xcopy /E /I /Y "frontend\\public\\*" "C:\\deploy\\ci-cd-lab\\frontend\\" 2>nul || xcopy /E /I /Y "frontend\\*" "C:\\deploy\\ci-cd-lab\\frontend\\"
+            
+            echo 4. Installing backend dependencies...
+            cd /d C:\\deploy\\ci-cd-lab\\backend
+            if exist package.json (
+              npm.cmd install
+            )
+            
+            echo ===== DEPLOYMENT COMPLETE =====
+            echo 
+            echo To start the backend server manually:
+            echo 1. Open Command Prompt as Administrator
+            echo 2. Run: cd /d C:\\deploy\\ci-cd-lab\\backend
+            echo 3. Run: npm start
+            echo 
+            echo To start the frontend server:
+            echo 1. Open another Command Prompt
+            echo 2. Run: cd /d C:\\deploy\\ci-cd-lab\\frontend
+            echo 3. Run: npx http-server -p 8082
+            echo 
+            echo Backend will run on: http://localhost:8081
+            echo Frontend will run on: http://localhost:8082
+            echo 
+            echo Files are ready at: C:\\deploy\\ci-cd-lab
+          '''
+        }
       }
     }
     
-    stage('Wait for testing') {
+    stage('Start Servers (Optional)') {
       steps {
-        echo 'Waiting 120 seconds for manual testing...'
         script {
-          // Ожидание 120 секунд (2 минуты)
+          // Просто сообщение, не запускаем серверы автоматически
+          echo 'NOTE: Jenkins cannot keep servers running after pipeline completes.'
+          echo 'To test your application:'
+          echo '1. Open Command Prompt'
+          echo '2. Navigate to C:\\deploy\\ci-cd-lab\\backend'
+          echo '3. Run: npm start'
+          echo '4. Open another Command Prompt'
+          echo '5. Navigate to C:\\deploy\\ci-cd-lab\\frontend'
+          echo '6. Run: npx http-server -p 8082'
+        }
+      }
+    }
+    
+    stage('Wait for Manual Test') {
+      steps {
+        echo 'Waiting 120 seconds... You can manually start servers to test.'
+        echo 'After pipeline finishes, servers must be started manually.'
+        script {
           sleep(time: 120, unit: 'SECONDS')
         }
-        echo 'Testing period ended.'
+        echo 'Waiting period ended.'
       }
     }
   }
@@ -109,19 +107,14 @@ pipeline {
   post {
     success { 
       echo 'Pipeline finished successfully.' 
-      echo 'Backend was available at: http://localhost:8081'
-      echo 'Note: Server processes may have been terminated after pipeline completion.'
+      echo 'Files are deployed to: C:\\deploy\\ci-cd-lab'
+      echo ''
+      echo 'To start servers manually:'
+      echo 'Backend: cd /d C:\\deploy\\ci-cd-lab\\backend && npm start'
+      echo 'Frontend: cd /d C:\\deploy\\ci-cd-lab\\frontend && npx http-server -p 8082'
     }
     failure { 
-      echo 'Pipeline failed.' 
-    }
-    always {
-      echo 'Cleaning up...'
-      bat '''
-        echo Stopping backend server...
-        taskkill /F /IM node.exe 2>nul || echo No node processes running
-        echo Cleanup completed.
-      '''
+      echo 'Pipeline failed - see errors above.' 
     }
   }
 }
