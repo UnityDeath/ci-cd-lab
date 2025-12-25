@@ -3,11 +3,6 @@ const res = await fetch(path, opts);
 return res.json();
 }
 
-//asiudhaksudh  
-
-function ajda(){
-    return 0;
-}
 
 async function updateStatus(){
 try{
@@ -22,6 +17,10 @@ document.getElementById('health').textContent = 'error';
 }
 }
 
+
+function kajsdn() {
+    return 1;
+}
 
 async function loadTasks(){
 const tasks = await api('/api/tasks');
